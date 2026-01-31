@@ -22,6 +22,33 @@
 
 # misc
 .DS_Store
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build
+.next
+out
+dist
+build
+
+# Dependencies
+node_modules
+
+# Logs
+*.log
+logs
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+
 *.pem
 
 # debug
