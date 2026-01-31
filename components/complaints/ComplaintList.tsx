@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatusBadge } from "@/components/common/StatusBadge"
@@ -27,40 +29,57 @@ export function ComplaintList({ complaints }: ComplaintListProps) {
   return (
     <div className="space-y-4">
       {complaints.map((complaint) => (
-        <Card key={complaint.id}>
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div className="space-y-1">
-                <CardTitle className="text-lg">{complaint.title}</CardTitle>
-                <p className="text-sm text-gray-500">
-                  {format(new Date(complaint.createdAt), "PPp")}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <StatusBadge status={complaint.status} />
-                <PriorityBadge priority={complaint.priority} />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-700 mb-4">{complaint.description}</p>
-            <div className="flex gap-4 text-sm text-gray-600">
-              <div>
-                <span className="font-medium">Category:</span> {complaint.category.replace('_', ' ')}
-              </div>
-              {complaint.location && (
-                <div>
-                  <span className="font-medium">Location:</span> {complaint.location}
+        <Link
+          href={`/student/complaints/${complaint.id}`}
+          key={complaint.id}
+          className="block"
+        >
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <CardTitle className="text-lg">
+                    {complaint.title}
+                  </CardTitle>
+                  <p className="text-sm text-gray-500">
+                    {format(new Date(complaint.createdAt), "PPp")}
+                  </p>
                 </div>
-              )}
-              {complaint.claimedBy && (
-                <div>
-                  <span className="font-medium">Claimed by:</span> {complaint.claimedBy.name}
+                <div className="flex gap-2">
+                  <StatusBadge status={complaint.status} />
+                  <PriorityBadge priority={complaint.priority} />
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardHeader>
+
+            <CardContent>
+              <p className="text-gray-700 mb-4">
+                {complaint.description}
+              </p>
+
+              <div className="flex gap-4 text-sm text-gray-600">
+                <div>
+                  <span className="font-medium">Category:</span>{" "}
+                  {complaint.category.replace("_", " ")}
+                </div>
+
+                {complaint.location && (
+                  <div>
+                    <span className="font-medium">Location:</span>{" "}
+                    {complaint.location}
+                  </div>
+                )}
+
+                {complaint.claimedBy && (
+                  <div>
+                    <span className="font-medium">Claimed by:</span>{" "}
+                    {complaint.claimedBy.name}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       ))}
     </div>
   )

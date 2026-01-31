@@ -2,13 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
-import { z } from "zod"
 import { pusherServer } from "@/lib/pusher"
-
-const statusUpdateSchema = z.object({
-  status: z.enum(["IN_PROGRESS", "RESOLVED"]),
-  remarks: z.string().min(1).max(500),
-})
 
 export async function PATCH(
   req: Request,
@@ -18,8 +12,14 @@ export async function PATCH(
     const { id } = await params
     const session = await getServerSession(authOptions)
 
-    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+    if (!session || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { status, remarks } = await req.json()
+
+    if (!status || !remarks) {
+      return NextResponse.json({ error: "Status and remarks are required" }, { status: 400 })
     }
 
     const complaint = await prisma.complaint.findUnique({
@@ -30,29 +30,36 @@ export async function PATCH(
       return NextResponse.json({ error: "Complaint not found" }, { status: 404 })
     }
 
-    if (complaint.claimedById !== session.user.id && session.user.role !== "SUPER_ADMIN") {
+    if (complaint.claimedById !== session.user.id) {
+      return NextResponse.json({ error: "You can only update complaints you claimed" }, { status: 403 })
+    }
+
+    const validTransitions: Record<string, string[]> = {
+      CLAIMED: ["IN_PROGRESS"],
+      IN_PROGRESS: ["RESOLVED"],
+    }
+
+    const allowed = validTransitions[complaint.status]
+    if (!allowed || !allowed.includes(status)) {
       return NextResponse.json(
-        { error: "You can only update complaints you have claimed" },
-        { status: 403 }
+        { error: `Cannot transition from ${complaint.status} to ${status}` },
+        { status: 400 }
       )
     }
 
-    const body = await req.json()
-    const { status, remarks } = statusUpdateSchema.parse(body)
+    const updateData: any = {
+      status,
+    }
+
+    if (status === "RESOLVED") {
+      updateData.resolvedAt = new Date()
+    }
 
     const updated = await prisma.complaint.update({
       where: { id },
-      data: {
-        status,
-        ...(status === "RESOLVED" && { resolvedAt: new Date() }),
-      },
-      include: {
-        student: true,
-        claimedBy: true,
-      },
+      data: updateData,
     })
 
-    // Create activity log
     await prisma.activity.create({
       data: {
         complaintId: id,
@@ -64,28 +71,27 @@ export async function PATCH(
       },
     })
 
-    // Create notification for student
-    const statusText = status === "RESOLVED" ? "resolved" : "updated to In Progress"
     await prisma.notification.create({
       data: {
         userId: complaint.studentId,
         complaintId: id,
-        message: `Your complaint "${complaint.title}" has been ${statusText}. Remarks: ${remarks}`,
+        message: `Your complaint "${complaint.title}" status updated to ${status}. Admin note: ${remarks}`,
       },
     })
 
-    await pusherServer.trigger("complaints", "complaint-updated", {
-      id: updated.id,
-      status: updated.status,
-      remarks: remarks,
-    })
+    try {
+      await pusherServer.trigger("complaints", "complaint-updated", {
+        id: updated.id,
+        status: updated.status,
+        remarks,
+      })
+    } catch (e) {
+      console.error("Pusher error:", e)
+    }
 
     return NextResponse.json(updated)
   } catch (error) {
-    console.error("Error updating complaint status:", error)
-    return NextResponse.json(
-      { error: "Failed to update complaint status" },
-      { status: 500 }
-    )
+    console.error("Error updating status:", error)
+    return NextResponse.json({ error: "Failed to update status" }, { status: 500 })
   }
 }

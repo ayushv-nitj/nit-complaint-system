@@ -12,7 +12,7 @@ export async function POST(
     const { id } = await params
     const session = await getServerSession(authOptions)
 
-    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+    if (!session || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -25,10 +25,7 @@ export async function POST(
     }
 
     if (complaint.claimedById) {
-      return NextResponse.json(
-        { error: "This complaint has already been claimed" },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "Complaint already claimed" }, { status: 400 })
     }
 
     const updated = await prisma.complaint.update({
@@ -38,46 +35,40 @@ export async function POST(
         claimedById: session.user.id,
         claimedAt: new Date(),
       },
-      include: {
-        student: true,
-        claimedBy: true,
-      },
     })
 
-    // Create activity log
     await prisma.activity.create({
       data: {
         complaintId: id,
         userId: session.user.id,
         action: "CLAIMED",
-        previousStatus: complaint.status,
+        previousStatus: "PENDING",
         newStatus: "CLAIMED",
         remarks: `Claimed by ${session.user.name}`,
       },
     })
 
-    // Create notification for student
     await prisma.notification.create({
       data: {
         userId: complaint.studentId,
         complaintId: id,
-        message: `Your complaint "${complaint.title}" has been claimed by ${session.user.name}`,
+        message: `Your complaint "${complaint.title}" has been claimed by ${session.user.name}.`,
       },
     })
 
-    await pusherServer.trigger("complaints", "complaint-claimed", {
-      id: updated.id,
-      status: updated.status,
-      claimedBy: session.user.name,
-      claimedAt: updated.claimedAt,
-    })
+    try {
+      await pusherServer.trigger("complaints", "complaint-claimed", {
+        id: updated.id,
+        status: updated.status,
+        claimedBy: session.user.name,
+      })
+    } catch (e) {
+      console.error("Pusher error:", e)
+    }
 
     return NextResponse.json(updated)
   } catch (error) {
     console.error("Error claiming complaint:", error)
-    return NextResponse.json(
-      { error: "Failed to claim complaint" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Failed to claim complaint" }, { status: 500 })
   }
 }
