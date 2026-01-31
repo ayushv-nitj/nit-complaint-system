@@ -1,5 +1,5 @@
 "use client"
-
+import { useRealtimeComplaints } from "@/hooks/useRealtimeComplaints"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -29,6 +29,8 @@ export default function StudentDashboard() {
   useEffect(() => {
     fetchComplaints()
   }, [])
+
+  useRealtimeComplaints(fetchComplaints)
 
   const handleSuccess = () => {
     setIsDialogOpen(false)

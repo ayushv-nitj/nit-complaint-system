@@ -1,4 +1,5 @@
 "use client"
+import { useRealtimeComplaints } from "@/hooks/useRealtimeComplaints"
 
 import { useEffect, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -36,6 +37,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchComplaints()
   }, [])
+
+  useRealtimeComplaints(fetchComplaints)
 
   if (isLoading) {
     return <div className="text-center py-12">Loading...</div>

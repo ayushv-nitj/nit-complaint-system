@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 import { z } from "zod"
+import { pusherServer } from "@/lib/pusher"
 
 const complaintSchema = z.object({
   title: z.string().min(10).max(100),
@@ -65,6 +66,18 @@ export async function POST(req: Request) {
         remarks: "Complaint submitted",
       },
     })
+
+    await pusherServer.trigger("complaints", "complaint-created", {
+  id: complaint.id,
+  title: complaint.title,
+  category: complaint.category,
+  status: complaint.status,
+  priority: complaint.priority,
+  studentName: complaint.student.name,
+  createdAt: complaint.createdAt,
+})
+
+return NextResponse.json(complaint, { status: 201 })
 
     // TODO: Trigger real-time update
 

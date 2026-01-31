@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
+import { pusherServer } from "@/lib/pusher"
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
@@ -15,7 +17,7 @@ export async function POST(
     }
 
     const complaint = await prisma.complaint.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!complaint) {
@@ -30,7 +32,7 @@ export async function POST(
     }
 
     const updated = await prisma.complaint.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: "CLAIMED",
         claimedById: session.user.id,
@@ -45,7 +47,7 @@ export async function POST(
     // Create activity log
     await prisma.activity.create({
       data: {
-        complaintId: params.id,
+        complaintId: id,
         userId: session.user.id,
         action: "CLAIMED",
         previousStatus: complaint.status,
@@ -58,9 +60,16 @@ export async function POST(
     await prisma.notification.create({
       data: {
         userId: complaint.studentId,
-        complaintId: params.id,
+        complaintId: id,
         message: `Your complaint "${complaint.title}" has been claimed by ${session.user.name}`,
       },
+    })
+
+    await pusherServer.trigger("complaints", "complaint-claimed", {
+      id: updated.id,
+      status: updated.status,
+      claimedBy: session.user.name,
+      claimedAt: updated.claimedAt,
     })
 
     return NextResponse.json(updated)

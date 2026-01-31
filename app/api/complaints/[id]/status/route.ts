@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 import { z } from "zod"
+import { pusherServer } from "@/lib/pusher"
 
 const statusUpdateSchema = z.object({
   status: z.enum(["IN_PROGRESS", "RESOLVED"]),
@@ -11,9 +12,10 @@ const statusUpdateSchema = z.object({
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
@@ -21,7 +23,7 @@ export async function PATCH(
     }
 
     const complaint = await prisma.complaint.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!complaint) {
@@ -39,7 +41,7 @@ export async function PATCH(
     const { status, remarks } = statusUpdateSchema.parse(body)
 
     const updated = await prisma.complaint.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status,
         ...(status === "RESOLVED" && { resolvedAt: new Date() }),
@@ -53,7 +55,7 @@ export async function PATCH(
     // Create activity log
     await prisma.activity.create({
       data: {
-        complaintId: params.id,
+        complaintId: id,
         userId: session.user.id,
         action: "STATUS_UPDATED",
         previousStatus: complaint.status,
@@ -67,22 +69,22 @@ export async function PATCH(
     await prisma.notification.create({
       data: {
         userId: complaint.studentId,
-        complaintId: params.id,
+        complaintId: id,
         message: `Your complaint "${complaint.title}" has been ${statusText}. Remarks: ${remarks}`,
       },
     })
 
+    await pusherServer.trigger("complaints", "complaint-updated", {
+      id: updated.id,
+      status: updated.status,
+      remarks: remarks,
+    })
+
     return NextResponse.json(updated)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      )
-    }
-    console.error("Error updating status:", error)
+    console.error("Error updating complaint status:", error)
     return NextResponse.json(
-      { error: "Failed to update status" },
+      { error: "Failed to update complaint status" },
       { status: 500 }
     )
   }

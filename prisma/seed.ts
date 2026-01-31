@@ -1,12 +1,9 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
-const prisma = new PrismaClient({
-  accelerateUrl: process.env.DATABASE_URL!,
-});
+const prisma = new PrismaClient()
 
 async function main() {
-     console.log("🌱 Seeding database...");
   const hashedPassword = await bcrypt.hash('Password123!', 10)
 
   // Create students
@@ -68,8 +65,8 @@ async function main() {
     },
   })
 
-  console.log('Seed data created successfully!')
-  console.log('Demo credentials:')
+  console.log('✅ Seed data created successfully!')
+  console.log('\n📝 Demo credentials:')
   console.log('Student: student1@nitjsr.ac.in / Password123!')
   console.log('Admin: admin@nitjsr.ac.in / Password123!')
   console.log('Super Admin: superadmin@nitjsr.ac.in / Password123!')
