@@ -1,5 +1,5 @@
 "use client"
-import { ArrowLeft } from "lucide-react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 import Link from "next/link"
+import { ArrowLeft, ShieldCheck } from "lucide-react"
 
 const registerSchema = z.object({
   email: z.string().email().endsWith("@nitjsr.ac.in", "Must use NIT Jamshedpur email"),
@@ -19,13 +20,11 @@ const registerSchema = z.object({
     .min(8, "Password must be at least 8 characters")
     .regex(/[0-9]/, "Password must contain at least one number")
     .regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character"),
-  department: z.string().optional(),
-  hostel: z.string().optional(),
 })
 
 type RegisterForm = z.infer<typeof registerSchema>
 
-export default function RegisterPage() {
+export default function SuperAdminRegisterPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -40,7 +39,7 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true)
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch("/api/auth/register/superadmin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -52,8 +51,8 @@ export default function RegisterPage() {
         return
       }
 
-      toast.success("Registration successful! Please login.")
-      router.push("/login")
+      toast.success("Super Admin registration successful! Please login.")
+      router.push("/login?role=superadmin")
     } catch (error) {
       toast.error("An error occurred. Please try again.")
     } finally {
@@ -65,19 +64,24 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-            <div className="flex items-center justify-between mb-4">
-  <Link href="/">
-    <Button variant="ghost" size="sm">
-      <ArrowLeft className="w-4 h-4 mr-2" />
-      Back
-    </Button>
-  </Link>
-</div>
+          <div className="flex items-center justify-between mb-4">
+            <Link href="/">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+            </Link>
+          </div>
+
+          <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+            <ShieldCheck className="w-8 h-8 text-purple-600" />
+          </div>
+
           <CardTitle className="text-2xl font-bold text-center">
-            Register
+            Super Admin Registration
           </CardTitle>
           <CardDescription className="text-center">
-            Create your student account
+            Create your super admin account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -96,37 +100,17 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Official Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="your-email@nitjsr.ac.in"
+                placeholder="director@nitjsr.ac.in"
                 {...register("email")}
                 disabled={isLoading}
               />
               {errors.email && (
                 <p className="text-sm text-red-500">{errors.email.message}</p>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="department">Department (Optional)</Label>
-              <Input
-                id="department"
-                placeholder="e.g., Computer Science"
-                {...register("department")}
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="hostel">Hostel (Optional)</Label>
-              <Input
-                id="hostel"
-                placeholder="e.g., Ambedkar Hall"
-                {...register("hostel")}
-                disabled={isLoading}
-              />
             </div>
 
             <div className="space-y-2">
@@ -148,16 +132,16 @@ export default function RegisterPage() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-purple-600 hover:bg-purple-700"
               disabled={isLoading}
             >
-              {isLoading ? "Creating account..." : "Create Account"}
+              {isLoading ? "Creating account..." : "Create Super Admin Account"}
             </Button>
           </form>
 
           <div className="mt-4 text-center text-sm">
             <span className="text-gray-600">Already have an account? </span>
-            <Link href="/login" className="text-blue-600 hover:underline">
+            <Link href="/login?role=superadmin" className="text-purple-600 hover:underline">
               Sign In
             </Link>
           </div>

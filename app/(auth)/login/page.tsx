@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 import Link from "next/link"
+import { ArrowLeft, GraduationCap, Shield, ShieldCheck } from "lucide-react"
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -22,7 +23,9 @@ type LoginForm = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
+  const role = searchParams.get("role") || "student"
 
   const {
     register,
@@ -31,6 +34,41 @@ export default function LoginPage() {
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   })
+
+  const getRoleConfig = () => {
+    switch (role) {
+      case "admin":
+        return {
+          title: "Admin Login",
+          icon: Shield,
+          color: "green",
+          bgColor: "bg-green-100",
+          iconColor: "text-green-600",
+          buttonColor: "bg-green-600 hover:bg-green-700",
+        }
+      case "superadmin":
+        return {
+          title: "Super Admin Login",
+          icon: ShieldCheck,
+          color: "purple",
+          bgColor: "bg-purple-100",
+          iconColor: "text-purple-600",
+          buttonColor: "bg-purple-600 hover:bg-purple-700",
+        }
+      default:
+        return {
+          title: "Student Login",
+          icon: GraduationCap,
+          color: "blue",
+          bgColor: "bg-blue-100",
+          iconColor: "text-blue-600",
+          buttonColor: "bg-blue-600 hover:bg-blue-700",
+        }
+    }
+  }
+
+  const config = getRoleConfig()
+  const Icon = config.icon
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
@@ -46,9 +84,27 @@ export default function LoginPage() {
         return
       }
 
-      // Redirect based on role (will be handled by middleware)
-      router.push("/student")
-      router.refresh()
+      // Get user session to determine actual role
+      const response = await fetch("/api/auth/session")
+      const session = await response.json()
+
+      if (session?.user?.role) {
+        const userRole = session.user.role.toLowerCase()
+        
+        // Redirect based on actual user role
+        if (userRole === "super_admin") {
+          router.push("/superadmin")
+        } else if (userRole === "admin") {
+          router.push("/admin")
+        } else {
+          router.push("/student")
+        }
+        
+        router.refresh()
+      } else {
+        router.push("/student")
+        router.refresh()
+      }
     } catch (error) {
       toast.error("An error occurred. Please try again.")
     } finally {
@@ -60,11 +116,24 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
+          <div className="flex items-center justify-between mb-4">
+            <Link href="/">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+            </Link>
+          </div>
+          
+          <div className={`mx-auto w-16 h-16 ${config.bgColor} rounded-full flex items-center justify-center mb-4`}>
+            <Icon className={`w-8 h-8 ${config.iconColor}`} />
+          </div>
+          
           <CardTitle className="text-2xl font-bold text-center">
-            NIT Jamshedpur
+            {config.title}
           </CardTitle>
           <CardDescription className="text-center">
-            Complaint Management System
+            NIT Jamshedpur Complaint Management
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -99,25 +168,28 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full"
+              className={`w-full ${config.buttonColor}`}
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
 
-          <div className="mt-4 text-center text-sm">
-            <span className="text-gray-600">Don't have an account? </span>
-            <Link href="/register" className="text-blue-600 hover:underline">
-              Register
-            </Link>
-          </div>
+          {role === "student" && (
+            <div className="mt-4 text-center text-sm">
+              <span className="text-gray-600">Don't have an account? </span>
+              <Link href="/register" className="text-blue-600 hover:underline">
+                Register
+              </Link>
+            </div>
+          )}
 
           <div className="mt-6 border-t pt-4">
             <p className="text-xs text-gray-500 text-center">
               Demo Credentials:<br />
-              Student: student1@nitjsr.ac.in / Password123!<br />
-              Admin: admin@nitjsr.ac.in / Password123!
+              {role === "student" && "student1@nitjsr.ac.in / Password123!"}
+              {role === "admin" && "admin@nitjsr.ac.in / Password123!"}
+              {role === "superadmin" && "superadmin@nitjsr.ac.in / Password123!"}
             </p>
           </div>
         </CardContent>

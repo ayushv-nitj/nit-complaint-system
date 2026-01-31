@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma";
-
+import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
 
@@ -11,8 +10,7 @@ const registerSchema = z.object({
     .min(8)
     .regex(/[0-9]/, "Password must contain at least one number")
     .regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character"),
-  department: z.string().optional(),
-  hostel: z.string().optional(),
+  expertise: z.enum(["HOSTEL", "MESS", "ACADEMIC", "INTERNET_NETWORK", "INFRASTRUCTURE", "OTHERS"]).optional(),
 })
 
 export async function POST(req: Request) {
@@ -38,9 +36,8 @@ export async function POST(req: Request) {
         email: data.email,
         name: data.name,
         password: hashedPassword,
-        role: "STUDENT",
-        department: data.department,
-        hostel: data.hostel,
+        role: "ADMIN",
+        expertise: data.expertise,
       },
       select: {
         id: true,

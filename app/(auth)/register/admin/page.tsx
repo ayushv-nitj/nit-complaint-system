@@ -1,5 +1,5 @@
 "use client"
-import { ArrowLeft } from "lucide-react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -9,8 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import Link from "next/link"
+import { ArrowLeft, Shield } from "lucide-react"
+import { COMPLAINT_CATEGORIES } from "@/lib/constants"
 
 const registerSchema = z.object({
   email: z.string().email().endsWith("@nitjsr.ac.in", "Must use NIT Jamshedpur email"),
@@ -19,13 +22,12 @@ const registerSchema = z.object({
     .min(8, "Password must be at least 8 characters")
     .regex(/[0-9]/, "Password must contain at least one number")
     .regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character"),
-  department: z.string().optional(),
-  hostel: z.string().optional(),
+  expertise: z.enum(["HOSTEL", "MESS", "ACADEMIC", "INTERNET_NETWORK", "INFRASTRUCTURE", "OTHERS"]).optional(),
 })
 
 type RegisterForm = z.infer<typeof registerSchema>
 
-export default function RegisterPage() {
+export default function AdminRegisterPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -33,14 +35,18 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
   })
 
+  const expertise = watch("expertise")
+
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true)
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch("/api/auth/register/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -52,8 +58,8 @@ export default function RegisterPage() {
         return
       }
 
-      toast.success("Registration successful! Please login.")
-      router.push("/login")
+      toast.success("Admin registration successful! Please login.")
+      router.push("/login?role=admin")
     } catch (error) {
       toast.error("An error occurred. Please try again.")
     } finally {
@@ -65,19 +71,24 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-            <div className="flex items-center justify-between mb-4">
-  <Link href="/">
-    <Button variant="ghost" size="sm">
-      <ArrowLeft className="w-4 h-4 mr-2" />
-      Back
-    </Button>
-  </Link>
-</div>
+          <div className="flex items-center justify-between mb-4">
+            <Link href="/">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+            </Link>
+          </div>
+
+          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+            <Shield className="w-8 h-8 text-green-600" />
+          </div>
+
           <CardTitle className="text-2xl font-bold text-center">
-            Register
+            Admin Registration
           </CardTitle>
           <CardDescription className="text-center">
-            Create your student account
+            Create your admin account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -110,23 +121,26 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="department">Department (Optional)</Label>
-              <Input
-                id="department"
-                placeholder="e.g., Computer Science"
-                {...register("department")}
+              <Label htmlFor="expertise">Area of Expertise (Optional)</Label>
+              <Select
+                value={expertise}
+                onValueChange={(value) => setValue("expertise", value as any)}
                 disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="hostel">Hostel (Optional)</Label>
-              <Input
-                id="hostel"
-                placeholder="e.g., Ambedkar Hall"
-                {...register("hostel")}
-                disabled={isLoading}
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your area" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COMPLAINT_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                This helps route relevant complaints to you
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -148,16 +162,16 @@ export default function RegisterPage() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-green-600 hover:bg-green-700"
               disabled={isLoading}
             >
-              {isLoading ? "Creating account..." : "Create Account"}
+              {isLoading ? "Creating account..." : "Create Admin Account"}
             </Button>
           </form>
 
           <div className="mt-4 text-center text-sm">
             <span className="text-gray-600">Already have an account? </span>
-            <Link href="/login" className="text-blue-600 hover:underline">
+            <Link href="/login?role=admin" className="text-green-600 hover:underline">
               Sign In
             </Link>
           </div>

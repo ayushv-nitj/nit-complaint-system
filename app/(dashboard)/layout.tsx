@@ -1,19 +1,16 @@
-import AuthSessionProvider from "@/components/providers/session-provider";
-import { Toaster } from "sonner";
+import { DashboardNav } from "@/components/layout/DashboardNav"
 
-export default function RootLayout({
+export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body>
-        <AuthSessionProvider>
-          {children}
-          <Toaster richColors position="top-right" />
-        </AuthSessionProvider>
-      </body>
-    </html>
-  );
+    <div className="min-h-screen bg-gray-50">
+      <DashboardNav />
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {children}
+      </main>
+    </div>
+  )
 }
