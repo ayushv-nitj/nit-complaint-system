@@ -8,7 +8,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false, // Strict type checking
   },
-  swcMinify: true, // SWC minification for faster builds
 };
 
 export default nextConfig;
