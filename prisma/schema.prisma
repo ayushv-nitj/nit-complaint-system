@@ -1,14 +1,137 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
-}
-
 datasource db {
   provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum ComplaintCategory {
+  HOSTEL
+  MESS
+  ACADEMIC
+  INTERNET_NETWORK
+  INFRASTRUCTURE
+  OTHERS
+}
+
+enum ComplaintStatus {
+  PENDING
+  CLAIMED
+  IN_PROGRESS
+  RESOLVED
+  ESCALATED
+}
+
+enum Priority {
+  NORMAL
+  HIGH
+}
+
+enum ActivityAction {
+  CREATED
+  CLAIMED
+  STATUS_UPDATED
+  COMMENT_ADDED
+  RESOLVED
+  ESCALATED
+  PRIORITY_INCREASED
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String
+  role          Role     @default(STUDENT)
+  department    String?
+  hostel        String?
+  expertise     ComplaintCategory?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  complaintsSubmitted  Complaint[] @relation("StudentComplaints")
+  complaintsClaimed    Complaint[] @relation("AdminComplaints")
+  activities           Activity[]
+  notifications        Notification[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Complaint {
+  id              String            @id @default(cuid())
+  displayId       String            @unique @default(cuid())
+  title           String
+  description     String
+  category        ComplaintCategory
+  status          ComplaintStatus   @default(PENDING)
+  priority        Priority          @default(NORMAL)
+  location        String?
+  attachments     Json?
+  
+  studentId       String
+  student         User              @relation("StudentComplaints", fields: [studentId], references: [id])
+  
+  claimedById     String?
+  claimedBy       User?             @relation("AdminComplaints", fields: [claimedById], references: [id])
+  claimedAt       DateTime?
+  
+  resolvedAt      DateTime?
+  escalatedAt     DateTime?
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  activities      Activity[]
+  notifications   Notification[]
+
+  @@index([studentId])
+  @@index([claimedById])
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+  @@index([priority])
+}
+
+model Activity {
+  id              String          @id @default(cuid())
+  complaintId     String
+  complaint       Complaint       @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  
+  action          ActivityAction
+  previousStatus  ComplaintStatus?
+  newStatus       ComplaintStatus?
+  remarks         String?
+  metadata        Json?
+  
+  timestamp       DateTime        @default(now())
+
+  @@index([complaintId])
+  @@index([timestamp])
+}
+
+model Notification {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  
+  complaintId     String
+  complaint       Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  
+  message         String
+  read            Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  @@index([userId, read])
+  @@index([createdAt])
 }
