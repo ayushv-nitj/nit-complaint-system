@@ -1,13 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactCompiler: true,
-  images: {
-    unoptimized: true, // For serverless functions
-  },
   typescript: {
-    ignoreBuildErrors: false, // Strict type checking
+    ignoreBuildErrors: false,
   },
+  images: {
+    unoptimized: true,
+  },
+  output: 'standalone',
 };
 
 export default nextConfig;
