@@ -1,7 +1,6 @@
 "use client"
 
-import { Suspense } from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -22,7 +21,7 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>
 
-function LoginForm() {
+export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
@@ -169,40 +168,23 @@ function LoginForm() {
 
             <Button
               type="submit"
-              className={`w-full ${config.buttonColor}`}
               disabled={isLoading}
+              className={`w-full ${config.buttonColor}`}
             >
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? "Logging in..." : "Login"}
             </Button>
           </form>
 
-          {role === "student" && (
-            <div className="mt-4 text-center text-sm">
-              <span className="text-gray-600">Don't have an account? </span>
-              <Link href="/register" className="text-blue-600 hover:underline">
-                Register
+          <div className="mt-6 border-t pt-6">
+            <p className="text-center text-sm text-gray-600">
+              Don't have an account?{" "}
+              <Link href={`/register?role=${role}`} className="text-blue-600 hover:underline">
+                Register here
               </Link>
-            </div>
-          )}
-
-          <div className="mt-6 border-t pt-4">
-            <p className="text-xs text-gray-500 text-center">
-              Demo Credentials:<br />
-              {role === "student" && "student1@nitjsr.ac.in / Password123!"}
-              {role === "admin" && "admin@nitjsr.ac.in / Password123!"}
-              {role === "superadmin" && "superadmin@nitjsr.ac.in / Password123!"}
             </p>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
-      <LoginForm />
-    </Suspense>
   )
 }
